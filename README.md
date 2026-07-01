@@ -31,24 +31,6 @@ Uživatel zadá absolutní cestu k adresáři (nebo využije systémový průzku
 
 Výsledky se zobrazí v přehledných kartách s dynamicky vyříznutým kontextem (snippetem), kde je hledané slovo zvýrazněno žlutým HTML tagem `<mark>`.
 
-```mermaid
-sequenceDiagram
-    actor U as Uživatel (Prohlížeč)
-    participant B as Sanic Backend
-    participant T as Deep Translator
-    participant N as spaCy Engine
-
-    U->>B: GET /api/search?query=soldier
-    alt Konceptuální mód (bez uvozovek)
-        B->>T: Automatický překlad (EN/CS)
-        T-->>B: Vrátí bilingvní koncepty
-    end
-    B->>N: Načtení textu a ořezaná NLP analýza
-    N-->>B: Tokeny a kmeny slov
-    B->>B: Porovnání kmenů a vyříznutí snippetu
-    B-->>U: JSON výsledky se zvýrazněným HTML textem
-```
-
 ### Lingvistická analýza textu
 
 Uživatel v pravé části rozhraní nahraje jakýkoliv lokální soubor formátu `.txt`. Po kliknutí na tlačítko "Analyzovat soubor" backend provede kompletní zpracování textu a okamžitě zobrazí základní kvantitativní metriky:

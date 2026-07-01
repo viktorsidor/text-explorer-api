@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search File and Text Analytics 🔍📊</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-white">
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Vyhledávač a Textová analýza🔍📊</h1>
+        
+        <div class="row">
+            <!-- PRVNÍ SKUPINA: Vyhledávač souborů -->
+            <div class="col-md-6 border-end border-secondary">
+                <h3>1. Vyhledávání souboru na základě výrazu <br> (TXT, PDF, DOCX)</h3>
+                
+                <div class="mb-2">
+                    <label for="folderInput" class="form-label text-muted">Cesta k adresáři:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-light text-white" id="folderInput" placeholder="Napište absolutní cestu nebo vyhledejte...">
+                        <button class="btn btn-outline-light" type="button" onclick="browseFolder()">Vyhledat...</button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="searchInput" class="form-label text-muted">Zadejte hledané slovo:</label>
+                    <input type="text" class="form-control" id="searchInput" placeholder="Napište výraz (pro exaktní vyhledávání vložte výraz do uvozovek)">
+                </div>
+                <button class="btn btn-primary w-100" onclick="search()">Hledat</button>
+                
+                <div id="results" class="mt-4" style="max-height: 500px; overflow-y: auto;"></div>
+            </div>
+
+            <!-- SKUPINA 2: Lingvistický analyzátor nahraného souboru -->
+            <div class="col-md-6">
+                <h3>2. Základní analýza textového souboru</h3>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Vyberte soubor typu .txt pro analýzu:</label>
+                    <input class="form-control" type="file" id="analysisFileInput" accept=".txt">
+                </div>
+                <button class="btn btn-success w-100" onclick="runRealAnalysis()">Analyzovat soubor</button>
+
+                <div id="metricsRow" class="row mt-4 d-none">
+                    <div class="col-4">
+                        <div class="card bg-secondary text-center p-2">
+                            <h6>Počet slov</h6><strong id="mWords" class="fs-4">0</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card bg-secondary text-center p-2">
+                            <h6>Velikost slovníku</h6><strong id="mVocab" class="fs-4">0</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card bg-secondary text-center p-2">
+                            <h6>Počet vět</h6><strong id="mSents" class="fs-4">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function browseFolder() {
+            try {
+                const response = await fetch("/api/browse-folder");
+                const data = await response.json();
+                if (data.folder) {
+                    document.getElementById("folderInput").value = data.folder;
+                }
+            } catch (err) {
+                alert("Chyba při otevírání systémového průzkumníka.");
+            }
+        }
+
+        async function search() {
+            const query = document.getElementById("searchInput").value;
+            const folder = document.getElementById("folderInput").value;
+            const resultsDiv = document.getElementById("results");
+            
+            if (!query) {
+                alert("Zadejte prosím hledaný výraz.");
+                return;
+            }
+            
+            resultsDiv.innerHTML = "Načítání...";
+            const url = `/api/search?query=${encodeURIComponent(query)}&folder=${encodeURIComponent(folder)}`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                resultsDiv.innerHTML = "";
+                
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = `<div class="alert alert-info">Žádné výsledky pro "${query}".</div>`;
+                    return;
+                }
+                
+                const listGroup = document.createElement("div");
+                listGroup.className = "list-group";
+                
+                for (const item of data) {
+                    const itemDiv = document.createElement("div");
+                    itemDiv.className = "list-group-item list-group-item-dark mb-2 shadow-sm";
+                    
+                    itemDiv.innerHTML = `
+                        <strong>📄 ${item.filename}</strong><br>
+                        <small class="text-info">Cesta: ${item.path}</small><br>
+                        <p class="mb-0 mt-2 bg-black text-white p-2 rounded border border-secondary" style="font-size: 0.9rem; line-height: 1.4;">
+                            ${item.preview}
+                        </p>
+                    `;
+                    listGroup.appendChild(itemDiv);
+                }
+                resultsDiv.appendChild(listGroup);
+            } catch (err) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Chyba při komunikaci se serverem.</div>`;
+            }
+        }
+
+        async function runRealAnalysis() {
+            const fileInput = document.getElementById("analysisFileInput");
+            if (fileInput.files.length === 0) {
+                alert("Vyberte nejprve textový soubor (.txt).");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            document.getElementById("mWords").innerText = "...";
+            document.getElementById("mVocab").innerText = "...";
+            document.getElementById("mSents").innerText = "...";
+            document.getElementById("metricsRow").classList.remove("d-none");
+
+            try {
+                const response = await fetch("/api/analyze", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error("Chyba analýzy.");
+
+                const data = await response.json();
+
+                document.getElementById("mWords").innerText = data.word_count;
+                document.getElementById("mVocab").innerText = data.vocabulary_size;
+                document.getElementById("mSents").innerText = data.sentence_count;
+
+            } catch (err) {
+                alert("Došlo k chybě: " + err.message);
+            }
+        }
+
+        document.getElementById("searchInput").addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                search();
+            }
+        });
+    </script>
+</body>
+</html>

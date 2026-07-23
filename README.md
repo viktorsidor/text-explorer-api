@@ -81,7 +81,7 @@ Vyvolá na hostitelském počítači nativní grafické okno pro výběr složky
 * **Vstup:** Žádný
 * **Úspěšná odpověď (200 OK):**
 ```json
-{ "folder": "C:\\Data\\PREDMETY\\ALG4\\data" }
+{ "folder": "C:\\Data\\projekt" }
 ```
 
 * **Poznámka:** V headless prostředích (např. Docker bez grafického rozhraní) funkce bezpečně selže a vrátí prázdný řetězec `""`.
